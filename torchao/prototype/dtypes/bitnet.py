@@ -112,12 +112,17 @@ def addmm(func, args, kwargs):
     y = torch.addmm(bias, x, weight)
     return y
 
+# @implements([torch.ops.aten.to.dtype_layout])
+# def to_dtype_layout(func, args, kwargs):
+#     tensor = args
+#     return torch.strided
+
 @implements([torch.ops.aten.t.default])
 def t(func, args, kwargs):
     (tensor,) = args
-    unpacked = unpack_uint2(tensor.elem).to(tensor.device)
-    transposed = unpacked.t()
-    return BitnetTensor(pack_uint2(transposed))
+
+    intermediate = torch.transpose(tensor.elem, 0, 1)
+    return BitnetTensor(intermediate).to(tensor.device)
 
 @implements([torch.ops.aten.detach.default])
 def detach(func, args, kwargs):
@@ -159,3 +164,7 @@ def allclose(func, args, kwargs):
     (a, b) = args
     return torch.allclose(a.elem, b.elem, **kwargs)
 
+@implements([torch.ops.aten.allclose.default])
+def allclose(func, args, kwargs):
+    (a, b) = args
+    return torch.allclose(a.elem, b.elem, **kwargs)
