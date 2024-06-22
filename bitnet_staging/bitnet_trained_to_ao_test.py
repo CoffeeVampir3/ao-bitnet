@@ -8,10 +8,25 @@ from torchvision.datasets import ImageFolder
 import urllib.request
 import tarfile
 from torchao.prototype.dtypes.bitnet import BitnetTensor
-from bitnet_lib.bn_lib import BitLinearTrain
 
-## TODO:: @Z
-# NotImplementedError: aten.amin.default <<
+class BitLinearTrain(nn.Linear):
+    def forward(self, x):
+        w = self.weight
+        x_norm = x
+        x_quant = x_norm + (activation_quant(x_norm) - x_norm).detach()
+        w_quant = w + (weight_quant(w) - w).detach()
+        y = F.linear(x_quant, w_quant)
+        return y
+
+    def activation_quant(x):
+        scale = 127.0 / x.abs().max(dim=-1, keepdim=True).values.clamp_(min=1e-5)
+        y = (x * scale).round().clamp_(-128, 127) / scale
+        return y
+
+    def weight_quant(w):
+        scale = 1.0 / w.abs().mean().clamp_(min=1e-5)
+        u = (w * scale).round().clamp_(-1, 1) / scale
+        return u
 
 class ImageMLP(nn.Module):
     def __init__(self):
@@ -85,7 +100,7 @@ train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
 
 # Training loop
-num_epochs = 1
+num_epochs = 2
 for epoch in range(num_epochs):
     # Training
     model.train()
