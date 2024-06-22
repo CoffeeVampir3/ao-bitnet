@@ -7,7 +7,7 @@ from torchvision import transforms
 from torchvision.datasets import ImageFolder
 import urllib.request
 import tarfile
-from torchao.prototype.dtypes.uint2 import BitnetTensor
+from torchao.prototype.dtypes.bitnet import BitnetTensor
 from bitnet_lib.bn_lib import BitLinearTrain
 
 ## TODO:: @Z
