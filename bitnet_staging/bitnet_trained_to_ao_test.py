@@ -9,21 +9,27 @@ import urllib.request
 import tarfile
 from torchao.prototype.dtypes.bitnet import BitnetTensor
 
+## TODO:: @Z
+# NotImplementedError: aten.amin.default <<
+
 class BitLinearTrain(nn.Linear):
     def forward(self, x):
+        print("Forward BNL")
         w = self.weight
         x_norm = x
-        x_quant = x_norm + (activation_quant(x_norm) - x_norm).detach()
-        w_quant = w + (weight_quant(w) - w).detach()
+        x_quant = x_norm + (self.activation_quant(x_norm) - x_norm).detach()
+        w_quant = w + (self.weight_quant(w) - w).detach()
         y = F.linear(x_quant, w_quant)
+
+        print("Forward BNL -- AFTER LINEAR")
         return y
 
-    def activation_quant(x):
+    def activation_quant(self, x):
         scale = 127.0 / x.abs().max(dim=-1, keepdim=True).values.clamp_(min=1e-5)
         y = (x * scale).round().clamp_(-128, 127) / scale
         return y
 
-    def weight_quant(w):
+    def weight_quant(self, w):
         scale = 1.0 / w.abs().mean().clamp_(min=1e-5)
         u = (w * scale).round().clamp_(-1, 1) / scale
         return u
@@ -36,15 +42,12 @@ class ImageMLP(nn.Module):
         self.softmax = nn.Softmax(dim=1)
 
     def replace_linears(self):
-        weight = BitnetTensor.from_float(self.linear.weight)
-        print(weight.shape)
-        in_features = weight.shape[1]
-        out_features = weight.shape[0]
-
-        self.linear = nn.Linear(in_features, out_features, bias=False)
-        self.linear.weight = nn.Parameter(weight, requires_grad=False)
+        new_linear = nn.Linear(self.linear.in_features, self.linear.out_features, device=self.linear.weight.device, bias=None)
+        new_linear.weight = torch.nn.Parameter(BitnetTensor.from_float(self.linear.weight), requires_grad=False)
+        self.linear = new_linear
 
     def forward(self, x):
+        print("Forward MLP")
         x = self.flatten(x)
         x = self.linear(x)
         x = self.softmax(x)
@@ -100,7 +103,7 @@ train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
 
 # Training loop
-num_epochs = 2
+num_epochs = 0
 for epoch in range(num_epochs):
     # Training
     model.train()
