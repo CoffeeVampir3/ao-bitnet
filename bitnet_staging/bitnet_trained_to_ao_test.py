@@ -103,7 +103,7 @@ train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
 
 # Training loop
-num_epochs = 0
+num_epochs = 1
 for epoch in range(num_epochs):
     # Training
     model.train()
